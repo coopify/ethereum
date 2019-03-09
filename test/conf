@@ -1,0 +1,14 @@
+NODE_ENV=test
+PORT=3001
+LOG_LEVEL=info
+
+REDIS_PORT=16379
+REDIS_HOST=localhost
+REDIS_PASSWORD=dontneed
+REDIS_USERNAME=dontneed
+
+DB_HOST = localhost
+DB_NAME_TEST = bbtest
+DB_USER = postgres
+DB_PASSWORD = dontneed
+DB_PORT = 5432

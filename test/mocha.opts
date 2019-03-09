@@ -1,0 +1,4 @@
+test/setup.ts
+test/**/*.test.ts
+--recursive
+--require ts-node/register

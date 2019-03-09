@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "module": "commonjs",
+    "noImplicitAny": false,
+    "outDir": "dist",
+    "preserveConstEnums": true,
+    "removeComments": true,
+    "strict": true,
+    "sourceMap": true,
+    "strictNullChecks": true,
+    "target": "es2017",
+    "typeRoots": ["node_modules/@types"],
+    "lib": [ "dom", "es2017" ]
+  },
+  "include": [
+    "src/**/*",
+    "config/**/*",
+    "lib/**/*",
+    "db/migrations/**/*",
+    "test/**/*",
+    "bin/**/*"
+  ],
+  "exclude": [
+    "**/*.spec.ts"
+  ]
+}

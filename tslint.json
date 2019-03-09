@@ -1,0 +1,45 @@
+{
+    "defaultSeverity": "error",
+    "extends": [
+        "tslint:recommended",
+        "tslint-eslint-rules"
+    ],
+    "jsRules": {},
+    "rules": {
+        "object-literal-sort-keys": false,
+        "comment-format": false,
+        "max-line-length": false,
+        "quotemark": [
+            true,
+            "single"
+        ],
+        "semicolon": [
+            true,
+            "never"
+        ],
+        "radix": false,
+        "ordered-imports": false,
+        "one-variable-per-declaration": false,
+        "whitespace": [
+            true,
+            "check-branch",
+            "check-operator",
+            "check-typecast",
+            "check-decl",
+            "check-module",
+            "check-separator",
+            "check-rest-spread",
+            "check-type",
+            "check-type-operator",
+            "check-preblock"
+        ],
+        "object-curly-spacing": true
+    },
+    "linterOptions": {
+      "exclude": [
+          "node_modules",
+          "dist"
+      ]
+    },
+    "rulesDirectory": []
+}
