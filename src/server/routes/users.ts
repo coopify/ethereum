@@ -4,6 +4,8 @@ import { authenticateRequest } from '../auth'
 
 const userRoutes = Router()
 
+userRoutes.get('/', usersController.getAccountsAsync)
+
 userRoutes.post('/signup', usersController.signupAsync, usersController.generateTokenAsync)
 userRoutes.post('/login', usersController.loginAsync, usersController.generateTokenAsync)
 userRoutes.post('/:userid/logout', usersController.logoutAsync)

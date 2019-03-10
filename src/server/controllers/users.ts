@@ -2,7 +2,7 @@ import { compare, genSalt, hash } from 'bcrypt'
 import { NextFunction, Request, Response } from 'express'
 import { sign } from 'jsonwebtoken'
 import { UserInterface } from '../interfaces'
-import { logger, redisCache } from '../services'
+import { logger, redisCache, etherClient } from '../services'
 import { User, userDTO } from '../models'
 import { ErrorPayload } from '../errorPayload'
 import { isValidEmail } from '../../../lib/validations'
@@ -20,6 +20,25 @@ export async function loadAsync(request: Request, response: Response, next: Next
         next()
     } catch (error) {
         logger.error(error)
+        response.status(400).json(new Error(error))
+    }
+}
+
+export async function getAccountsAsync(request: Request, response: Response) {
+    try {
+        //const balance = await etherClient.getAccountsAsync()
+        const balance = await etherClient.getBalanceAsync()
+        const fromAddress = '0xCEE267634114c3cc64Cd1e6C44DCFc84B0047B68'
+        const fromPK = '5AC21EB99877CE714F047D430902BF5D8106FB3BC691A9F904F76E630F9D08BB'
+        const toAddress = '0xF5762AA3939aC4DD4487A1814097FDad477f78aE'
+        const amount = 8886110
+        const gas = '500000'
+        const gasLimit = '21000'
+        const transacion = await etherClient.transferAsync(fromAddress, fromPK, toAddress, amount, gas, gasLimit)
+        response.status(200)
+        response.send({ balance, transacion })
+    } catch (error) {
+        logger.error(error + JSON.stringify(error))
         response.status(400).json(new Error(error))
     }
 }

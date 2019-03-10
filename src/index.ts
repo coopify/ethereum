@@ -1,7 +1,7 @@
 import * as dotenv from 'dotenv'
 dotenv.config()
 import app from './server'
-import { logger, apn, initWLogger, initExternalServices } from './server/services'
+import { logger, initWLogger, initExternalServices } from './server/services'
 import * as config from '../config'
 
 const errors = config.validateAll()
