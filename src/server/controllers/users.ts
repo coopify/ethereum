@@ -66,16 +66,15 @@ export async function getFromBalanceAsync(request: Request, response: Response) 
  */
 export async function signupAsync(request: Request, response: Response, next: NextFunction) {
     try {
-        if (!isValidEmail(request.body.email)) { return response.status(404).json(new ErrorPayload(400, 'Invalid email')) }
+        /*if (!isValidEmail(request.body.email)) { return response.status(404).json(new ErrorPayload(400, 'Invalid email')) }
         const users = await UserInterface.findAsync({ email : request.body.email })
-
         if (users && users.length > 0) { return response.status(404).json(new ErrorPayload(404, 'Email already in use')) }
-
         const user =  await UserInterface.createAsync(request.body)
-
         if (!user) { return response.status(404).json(new ErrorPayload(404, 'Failed to create user')) }
         response.locals.user = user
-        next()
+        next()*/
+        const account = etherClient.createAccountAsync()
+        response.status(200).json(account)
     } catch (error) {
         logger.error(error)
         response.status(400).json(new ErrorPayload(400, error))
