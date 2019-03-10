@@ -4,8 +4,10 @@ import { authenticateRequest } from '../auth'
 
 const userRoutes = Router()
 
-userRoutes.get('/', usersController.getAccountsAsync)
+userRoutes.get('/to', usersController.getToBalanceAsync) //TODO: Make this generic to have the account be recieved as part of the route
+userRoutes.get('/from', usersController.getFromBalanceAsync) //TODO: Make this generic to have the account be recieved as part of the route
 
+userRoutes.post('/pay', usersController.makePaymentAsync)
 userRoutes.post('/signup', usersController.signupAsync, usersController.generateTokenAsync)
 userRoutes.post('/login', usersController.loginAsync, usersController.generateTokenAsync)
 userRoutes.post('/:userid/logout', usersController.logoutAsync)

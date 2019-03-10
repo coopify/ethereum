@@ -47,8 +47,13 @@ export class EthereumWeb3 {
         return personalAccount
     }
     
-    public async getBalanceAsync(address: string) {
-        const weiResult = await this.client.eth.getBalance(address)
+    public async getFromBalanceAsync() {
+        const weiResult = await this.client.eth.getBalance(this.toAddress)
+        return this.client.utils.fromWei(weiResult, 'gwei')
+    }
+
+    public async getToBalanceAsync() {
+        const weiResult = await this.client.eth.getBalance(this.fromAddress)
         return this.client.utils.fromWei(weiResult, 'gwei')
     }
 

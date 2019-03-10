@@ -24,13 +24,37 @@ export async function loadAsync(request: Request, response: Response, next: Next
     }
 }
 
-export async function getAccountsAsync(request: Request, response: Response) {
+export async function makePaymentAsync(request: Request, response: Response) {
     try {
         //TODO: Add some lookout mechanism to find the address and pk of a user after creating their account
         const amount = '40'
         const transacion = await etherClient.transferAsync(amount)
         response.status(200)
         response.send({ transacion })
+    } catch (error) {
+        logger.error(error + JSON.stringify(error))
+        response.status(400).json(new Error(error))
+    }
+}
+
+export async function getToBalanceAsync(request: Request, response: Response) {
+    try {
+        //TODO: Add some lookout mechanism to find the address and pk of a user after creating their account
+        const balance = await etherClient.getToBalanceAsync()
+        response.status(200)
+        response.send({ balance })
+    } catch (error) {
+        logger.error(error + JSON.stringify(error))
+        response.status(400).json(new Error(error))
+    }
+}
+
+export async function getFromBalanceAsync(request: Request, response: Response) {
+    try {
+        //TODO: Add some lookout mechanism to find the address and pk of a user after creating their account
+        const balance = await etherClient.getFromBalanceAsync()
+        response.status(200)
+        response.send({ balance })
     } catch (error) {
         logger.error(error + JSON.stringify(error))
         response.status(400).json(new Error(error))
