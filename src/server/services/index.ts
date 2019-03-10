@@ -31,7 +31,7 @@ export  function initExternalServices() {
 
     rdb.initAsync(rdbOpt)
 
-    etherClient = new EthereumWeb3({ apikey: '' })
+    etherClient = new EthereumWeb3(config.web3)
 }
 
 /*

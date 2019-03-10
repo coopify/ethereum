@@ -26,17 +26,11 @@ export async function loadAsync(request: Request, response: Response, next: Next
 
 export async function getAccountsAsync(request: Request, response: Response) {
     try {
-        //const balance = await etherClient.getAccountsAsync()
-        const balance = await etherClient.getBalanceAsync()
-        const fromAddress = '0xCEE267634114c3cc64Cd1e6C44DCFc84B0047B68'
-        const fromPK = '5AC21EB99877CE714F047D430902BF5D8106FB3BC691A9F904F76E630F9D08BB'
-        const toAddress = '0xF5762AA3939aC4DD4487A1814097FDad477f78aE'
-        const amount = 8886110
-        const gas = '500000'
-        const gasLimit = '21000'
-        const transacion = await etherClient.transferAsync(fromAddress, fromPK, toAddress, amount, gas, gasLimit)
+        //TODO: Add some lookout mechanism to find the address and pk of a user after creating their account
+        const amount = '40'
+        const transacion = await etherClient.transferAsync(amount)
         response.status(200)
-        response.send({ balance, transacion })
+        response.send({ transacion })
     } catch (error) {
         logger.error(error + JSON.stringify(error))
         response.status(400).json(new Error(error))
