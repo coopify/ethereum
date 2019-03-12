@@ -18,7 +18,7 @@ export async function validateToken(request: Request, response: Response, next: 
 
         const loggedUser = await User.getAsync(id)
         if (!loggedUser) { return response.status(403).json(new ErrorPayload(403, 'Invalid access token')) }
-        logger.info(`Logged user ${loggedUser.email} with email: ${loggedUser.email}`)
+        logger.info(`Logged user ${loggedUser.userId}`)
         response.locals.loggedUser = loggedUser
         next()
     } catch (error) {

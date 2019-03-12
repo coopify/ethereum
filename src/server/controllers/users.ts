@@ -1,11 +1,9 @@
-import { compare, genSalt, hash } from 'bcrypt'
 import { NextFunction, Request, Response } from 'express'
 import { sign } from 'jsonwebtoken'
 import { UserInterface } from '../interfaces'
 import { logger, redisCache, etherClient } from '../services'
 import { User, userDTO } from '../models'
 import { ErrorPayload } from '../errorPayload'
-import { isValidEmail } from '../../../lib/validations'
 
 /**
  * This function loads the user that matchs with userId (request query) into response.locals.user
@@ -26,9 +24,12 @@ export async function loadAsync(request: Request, response: Response, next: Next
 
 export async function makePaymentAsync(request: Request, response: Response) {
     try {
-        //TODO: Add some lookout mechanism to find the address and pk of a user after creating their account
-        const amount = '40'
-        const transacion = await etherClient.transferAsync(amount)
+        const { toId, amount } = request.body
+        if (!toId) { throw new Error('Missing required fields') }
+        const to = await UserInterface.findOneAsync({ userId: toId })
+        const user: User | null = response.locals.user
+        if (!user || !to ) { throw new Error('User not found') }
+        const transacion = await etherClient.transferCoopiesAsync(to.address,  amount, user.address, user.pk)
         response.status(200)
         response.send({ transacion })
     } catch (error) {
@@ -37,22 +38,10 @@ export async function makePaymentAsync(request: Request, response: Response) {
     }
 }
 
-export async function getToBalanceAsync(request: Request, response: Response) {
+export async function getAccountBalance(request: Request, response: Response) {
     try {
-        //TODO: Add some lookout mechanism to find the address and pk of a user after creating their account
-        const balance = await etherClient.getToBalanceAsync()
-        response.status(200)
-        response.send({ balance })
-    } catch (error) {
-        logger.error(error + JSON.stringify(error))
-        response.status(400).json(new Error(error))
-    }
-}
-
-export async function getFromBalanceAsync(request: Request, response: Response) {
-    try {
-        //TODO: Add some lookout mechanism to find the address and pk of a user after creating their account
-        const balance = await etherClient.getFromBalanceAsync()
+        const user: User = response.locals.user
+        const balance = await etherClient.getBalanceAsync(user.address)
         response.status(200)
         response.send({ balance })
     } catch (error) {
@@ -66,15 +55,15 @@ export async function getFromBalanceAsync(request: Request, response: Response) 
  */
 export async function signupAsync(request: Request, response: Response, next: NextFunction) {
     try {
-        /*if (!isValidEmail(request.body.email)) { return response.status(404).json(new ErrorPayload(400, 'Invalid email')) }
-        const users = await UserInterface.findAsync({ email : request.body.email })
-        if (users && users.length > 0) { return response.status(404).json(new ErrorPayload(404, 'Email already in use')) }
-        const user =  await UserInterface.createAsync(request.body)
-        if (!user) { return response.status(404).json(new ErrorPayload(404, 'Failed to create user')) }
-        response.locals.user = user
-        next()*/
+        const userId = request.body.userId
+        if (!userId) { throw new Error('Missing required fields') }
         const account = etherClient.createAccountAsync()
-        response.status(200).json(account)
+        const user = await UserInterface.createAsync({ address: account.address, pk: account.privateKey, userId })
+        if (!user) { throw new Error('User not found') }
+        await etherClient.transferCoopiesAsync(user.address, '40') //TODO DOUBLE/TRIPLE CHECK THIS VALUES
+        await etherClient.transferFuelAsync(user.address, '40') //TODO DOUBLE/TRIPLE CHECK THIS VALUES
+        const balance = await etherClient.getBalanceAsync(user.address)
+        response.status(200).json(balance)
     } catch (error) {
         logger.error(error)
         response.status(400).json(new ErrorPayload(400, error))
@@ -94,85 +83,13 @@ export async function generateTokenAsync(request: Request, response: Response, n
         logger.error('Error in generateTokenAsync')
         response.status(500).json(new ErrorPayload(500, error.message))
     }
-  }
-
-/**
- * This function loads the user that matchs with userId (request query) into response.locals.user
- */
-export async function loginAsync(request: Request, response: Response, next: NextFunction) {
-
-    try {
-        if (!isValidEmail(request.body.email)) { return response.status(404).json(new ErrorPayload(400, 'Invalid email')) }
-        const users =  await UserInterface.findAsync({ email : request.body.email })
-
-        if (!users || users.length === 0) { return response.status(404).json(new Error('User not found')) }
-        const user = users[0]
-        if (user.password !== request.body.password) { return response.status(401).json(new Error('Wrong password')) }
-
-        response.locals.user = user
-        next()
-    } catch (error) {
-        logger.error(error)
-        response.status(500).json(new ErrorPayload(500, error))
-    }
-}
-
-export async function logoutAsync(request: Request, response: Response, next: NextFunction) {
-    try {
-        const logged = response.locals.loggedUser as User
-        const user = response.locals.user as User
-        if (logged && user && logged.id && user.id && logged.id.toString() === user.id.toString()) {
-            const authHeader = request.header('authorization') || ''
-            const token = authHeader.split(' ')[0]
-            redisCache.deleteAccessTokenAsync(token)
-            response.status(200)
-            response.send()
-        } else {
-            response.status(401).json(new ErrorPayload(401, 'Unauthorized'))
-        }
-    } catch (error) {
-        logger.error(error as Error)
-        response.status(400).json(new ErrorPayload(40, error.message))
-    }
-}
-
-/**
- * This function loads the user that matchs with bearer token (request header) into response.locals.loggedUser
- */
-export async function loadLoggedUser(request: Request, response: Response, next: NextFunction) {
-    const token = extractAuthBearerToken(request)
-    try {
-        if (!token) { return next() }
-
-        const id: string = await redisCache.getUserIdAsync(token)
-
-        if (!id) {
-            logger.error(`USER Ctrl => Invalid bearer token: ${token}`)
-            throw new Error(`Invalid bearer token: ${token}`)
-        }
-
-        const loggedUser = await UserInterface.getAsync(id)
-        if (!loggedUser) {
-            logger.error(`USER Ctrl => User not found with id: ${id}`)
-            return response.status(403).json(new Error('User not found'))
-        }
-
-        logger.info(`USER Ctrl => Loaded logged user ${loggedUser.email}`)
-        response.locals.loggedUser = loggedUser
-
-        next()
-    } catch (error) {
-        logger.error(`USER Ctrl => Failed to load user with token: ${token}`)
-        response.status(400).json(new Error(error))
-    }
 }
 
 /**
  * This function should be used when the endpoint is extrictly for logged users
  */
 export function authenticate(request: Request, response: Response, next: NextFunction) {
-    if (!response.locals.loggedUser) { response.status(401).json(new Error(`Unauthorised. You need to provide a valid bearer token`)) }
-
+    if (!response.locals.user) { response.status(401).json(new Error(`Unauthorised. You need to provide a valid bearer token`)) }
     next()
 }
 function extractAuthBearerToken(request: Request): string {

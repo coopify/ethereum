@@ -2,7 +2,6 @@ import { logger } from "."
 import web3 from 'web3'
 import { readFileSync } from 'fs'
 import { getPath } from '../../../files'
-import { TransactionReceipt } from "web3-core/types";
 const Web3 = require('web3')
 const Tx = require('ethereumjs-tx')
 
@@ -46,31 +45,51 @@ export class EthereumWeb3 {
         logger.info(`Account => ${JSON.stringify(personalAccount)}`)
         return personalAccount
     }
-    
-    public async getFromBalanceAsync() {
-        const weiResult = await this.client.eth.getBalance(this.toAddress)
+
+    public async getBalanceAsync(address: string) {
+        const weiResult = await this.client.eth.getBalance(address)
         return this.client.utils.fromWei(weiResult, 'gwei')
     }
 
-    public async getToBalanceAsync() {
-        const weiResult = await this.client.eth.getBalance(this.fromAddress)
-        return this.client.utils.fromWei(weiResult, 'gwei')
-    }
-
-    public async transferAsync(amount: any) {
+    public async transferFuelAsync(to: string, amount: any) {
         try {
             ///https://web3js.readthedocs.io/en/1.0/web3-eth.html#sendtransaction
             const nouce = await this.client.eth.getTransactionCount(this.fromAddress)
+            var rawTransaction = {
+                to,
+                value: this.client.utils.toHex( this.client.utils.toWei(amount, 'gwei') ),
+                gasPrice: this.client.utils.toHex( this.client.utils.toWei('40', 'gwei') ),
+                gasLimit: this.client.utils.toHex(210000),
+                nonce: this.client.utils.toHex(nouce),
+            }
+            var transaction = new Tx(rawTransaction);
+            var privateKey = Buffer.from(this.fromPK , 'hex')
+            await transaction.sign(privateKey)
+            const transactionPromise = await this.client.eth.sendSignedTransaction('0x'+transaction.serialize().toString('hex'))
+            return transactionPromise    
+        } catch (error) {
+            logger.error(`ERROR => ${JSON.stringify(error)} - ${error}`)
+            throw Error('Transaction failed')
+        }
+    }
+
+    
+    public async transferCoopiesAsync(to: string, amount: any, from?: string, fromPK?: string) {
+        try {
+            const fromAddress = from ? from : this.fromAddress
+            const fromKey = fromPK ? fromPK : this.fromPK
+            ///https://web3js.readthedocs.io/en/1.0/web3-eth.html#sendtransaction
+            const nouce = await this.client.eth.getTransactionCount(fromAddress)
             var rawTransaction = {
                 to: this.contractAddress,
                 value: '0x0',
                 gasPrice: this.client.utils.toHex( this.client.utils.toWei('40', 'gwei') ),
                 gasLimit: this.client.utils.toHex(210000),
                 nonce: this.client.utils.toHex(nouce),
-                data: this.contract.methods.transfer(this.toAddress, this.client.utils.toWei(amount, 'gwei')).encodeABI(),
+                data: this.contract.methods.transfer(to, this.client.utils.toWei(amount, 'gwei')).encodeABI(),
             }
             var transaction = new Tx(rawTransaction);
-            var privateKey = Buffer.from(this.fromPK , 'hex')
+            var privateKey = Buffer.from(fromKey , 'hex')
             await transaction.sign(privateKey)
             const transactionPromise = await this.client.eth.sendSignedTransaction('0x'+transaction.serialize().toString('hex'))
             return transactionPromise    

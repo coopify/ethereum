@@ -1,5 +1,4 @@
-import { User, UserAttributes, userDTO } from '../models'
-import { hash } from 'bcrypt'
+import { User, UserAttributes } from '../models'
 import { logger } from '../services'
 
 export async function getAsync(id: string): Promise<User | null> {
@@ -18,6 +17,16 @@ export async function findAsync(where: object): Promise<User[] | null> {
         const userInstances = await User.getManyAsync(where)
 
         return userInstances
+    } catch (error) {
+        logger.error(new Error(error))
+        throw error
+    }
+}
+
+export async function findOneAsync(where: object): Promise<User | null> {
+    try {
+        const userInstance = await User.getOneAsync(where)
+        return userInstance
     } catch (error) {
         logger.error(new Error(error))
         throw error
