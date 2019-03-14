@@ -12,7 +12,7 @@
     "prebuild": "rimraf dist",
     "js-start": "node ./dist/src/index.js",
     "ts-start": "yarn run build:live",
-    "build": "node_modules/.bin/tsc && yarn run copy-package && yarn run zip",
+    "build": "",
     "build:live": "./node_modules/.bin/nodemon --exec ./node_modules/.bin/ts-node -- ./src/index.ts --watch src",
     "copy-files": "cp -R files/ dist/files/",
     "copy-package": "cp package.json dist/package.json",
