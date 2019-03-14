@@ -1,1 +1,1 @@
-web: yarn db:migrate && yarn build && node dist/src/index.js
+web: yarn db:migrate && yarn ts-start
