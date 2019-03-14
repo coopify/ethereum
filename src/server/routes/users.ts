@@ -1,6 +1,5 @@
 import { Router } from 'express'
 import { usersController } from '../controllers'
-import { authenticateRequest } from '../auth'
 
 const userRoutes = Router()
 

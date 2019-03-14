@@ -10,7 +10,7 @@ import { ErrorPayload } from '../errorPayload'
  */
 export async function loadAsync(request: Request, response: Response, next: NextFunction, id: string) {
     try {
-        const user =  await UserInterface.getAsync(id)
+        const user =  await UserInterface.findOneAsync({ userId: id })
 
         if (!user) { return response.status(404).json(new Error('User not found')) }
 
@@ -50,9 +50,6 @@ export async function getAccountBalance(request: Request, response: Response) {
     }
 }
 
-/**
- * This function loads the user that matchs with userId (request query) into response.locals.user
- */
 export async function signupAsync(request: Request, response: Response, next: NextFunction) {
     try {
         const userId = request.body.userId
@@ -68,32 +65,4 @@ export async function signupAsync(request: Request, response: Response, next: Ne
         logger.error(error)
         response.status(400).json(new ErrorPayload(400, error))
     }
-}
-
-export async function generateTokenAsync(request: Request, response: Response, next: NextFunction) {
-    const user: User = response.locals.user
-    const payload = { userId: user.id }
-
-    try {
-        const accessToken = sign(payload, 'someKeyToSubstitute')
-        await redisCache.saveAccessTokenAsync(`${user.id}`, accessToken)
-        const bodyResponse = { accessToken, user: userDTO(user) }
-        response.status(200).json(bodyResponse)
-    } catch (error) {
-        logger.error('Error in generateTokenAsync')
-        response.status(500).json(new ErrorPayload(500, error.message))
-    }
-}
-
-/**
- * This function should be used when the endpoint is extrictly for logged users
- */
-export function authenticate(request: Request, response: Response, next: NextFunction) {
-    if (!response.locals.user) { response.status(401).json(new Error(`Unauthorised. You need to provide a valid bearer token`)) }
-    next()
-}
-function extractAuthBearerToken(request: Request): string {
-    const authHeader = request.header('authorization') || ''
-    const token = authHeader.split(' ')[1]
-    return token
 }
