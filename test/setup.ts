@@ -12,7 +12,7 @@ chai.use(chaiChange)
 
 config.validateAll()
 
-before(async () => {
+/*before(async () => {
     initWLogger()
     await initExternalServices()
     logger.info('TESTS => Services initialized')
@@ -20,4 +20,4 @@ before(async () => {
 
 beforeEach('cleanDatabase', async () => {
     await rdb.sequelize.truncate({ cascade: true })
-})
+})*/

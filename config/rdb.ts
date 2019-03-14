@@ -1,6 +1,6 @@
 import { IsInt, IsString, IsNotEmpty, Validate, ValidateIf, IsFQDN } from 'class-validator'
 import { CValidator, IValidationError } from '../lib/validations'
-import * as dbConfigs from './database'
+import * as dbConfigs from './config'
 
 export class RDBConfigs extends CValidator {
     public isValid: boolean

@@ -1,18 +1,13 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, Unique, AfterCreate } from 'sequelize-typescript'
-import { rdb } from '../../services'
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, Unique } from 'sequelize-typescript'
 
 interface IAttributes {
-    email: string
-    password: string
-    pictureURL: string
+    userId: string
+    address: string
+    pk: string
 }
 
 @Table({ timestamps: true })
 class User extends Model<User> {
-    @AfterCreate
-    public static sendConfirmationEmail() {
-        // TODO
-    }
 
     public static async getAsync(id: string): Promise<User | null> {
         return this.findById<User>(id)
@@ -20,6 +15,10 @@ class User extends Model<User> {
 
     public static async getManyAsync(where: any): Promise<User[] | null> {
         return this.findAll<User>({ where })
+    }
+
+    public static async getOneAsync(where: any): Promise<User | null> {
+        return this.findOne<User>({ where })
     }
 
     public static async createAsync(params: IAttributes): Promise<User> {
@@ -34,32 +33,24 @@ class User extends Model<User> {
 
     @AllowNull(false)
     @Column(DataType.STRING)
-    public password
+    public userId
 
     @AllowNull(false)
-    @Unique
     @Column(DataType.STRING)
-    public email
+    public address
 
+    @AllowNull(false)
     @Column(DataType.STRING)
-    public pictureURL
+    public pk
 
-    @Column(DataType.STRING)
-    public resetToken
-
-    @Default(false)
-    @Column(DataType.BOOLEAN)
-    public isVerified
 }
 
 function toDTO(user: User | null): object | null {
     if (!user) { throw new Error(`Failed to DTO User: ${JSON.stringify(user)}`) }
     return {
         id: user.id,
-        email: user.email,
-        pictureURL: user.pictureURL,
-        resetToken: user.resetToken,
-        isVerified: user.isVerified,
+        userId: user.userId,
+        address: user.address,
     }
 }
 
