@@ -1,1 +1,0 @@
-web: yarn db:migrate && yarn ts-start
