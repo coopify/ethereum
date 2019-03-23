@@ -1,8 +1,7 @@
 import { NextFunction, Request, Response } from 'express'
-import { sign } from 'jsonwebtoken'
 import { UserInterface } from '../interfaces'
-import { logger, redisCache, etherClient } from '../services'
-import { User, userDTO } from '../models'
+import { logger, cryptoClient } from '../services'
+import { User } from '../models'
 import { ErrorPayload } from '../errorPayload'
 
 /**
@@ -29,7 +28,7 @@ export async function makePaymentAsync(request: Request, response: Response) {
         const to = await UserInterface.findOneAsync({ userId: toId })
         const user: User | null = response.locals.user
         if (!user || !to ) { throw new Error('User not found') }
-        const transacion = await etherClient.transferCoopiesAsync(to.address,  amount, user.address, user.pk)
+        const transacion = await cryptoClient.transferCoopiesAsync(to.address,  amount, user.address, user.pk)
         response.status(200)
         response.send({ transacion })
     } catch (error) {
@@ -41,7 +40,7 @@ export async function makePaymentAsync(request: Request, response: Response) {
 export async function getAccountBalance(request: Request, response: Response) {
     try {
         const user: User = response.locals.user
-        const balance = await etherClient.getBalanceAsync(user.address)
+        const balance = await cryptoClient.getBalanceAsync(user.address)
         response.status(200)
         response.send({ balance })
     } catch (error) {
@@ -54,12 +53,12 @@ export async function signupAsync(request: Request, response: Response, next: Ne
     try {
         const userId = request.body.userId
         if (!userId) { throw new Error('Missing required fields') }
-        const account = etherClient.createAccountAsync()
+        const account = cryptoClient.createAccountAsync()
         const user = await UserInterface.createAsync({ address: account.address, pk: account.privateKey, userId })
         if (!user) { throw new Error('User not found') }
-        await etherClient.transferCoopiesAsync(user.address, '40') //TODO DOUBLE/TRIPLE CHECK THIS VALUES
-        await etherClient.transferFuelAsync(user.address, '40') //TODO DOUBLE/TRIPLE CHECK THIS VALUES
-        const balance = await etherClient.getBalanceAsync(user.address)
+        await cryptoClient.transferCoopiesAsync(user.address, 40) //TODO DOUBLE/TRIPLE CHECK THIS VALUES
+        await cryptoClient.addFreeFuelAmountAsync(user.address, 40000) //TODO DOUBLE/TRIPLE CHECK THIS VALUES
+        const balance = await cryptoClient.getBalanceAsync(user.address)
         response.status(200).json(balance)
     } catch (error) {
         logger.error(error)

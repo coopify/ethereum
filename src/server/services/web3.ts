@@ -2,6 +2,7 @@ import { logger } from "."
 import web3 from 'web3'
 import { readFileSync } from 'fs'
 import { getPath } from '../../../files'
+import { IResolver } from './IResolver'
 const Web3 = require('web3')
 const Tx = require('ethereumjs-tx')
 
@@ -13,7 +14,7 @@ export interface IConfigParams {
     provider: string
 }
 
-export class EthereumWeb3 {
+export class EthereumWeb3 implements IResolver {
     public connected: boolean = false
     private client: web3
     private contractABI: any
@@ -51,13 +52,13 @@ export class EthereumWeb3 {
         return this.client.utils.fromWei(weiResult, 'gwei')
     }
 
-    public async transferFuelAsync(to: string, amount: any) {
+    public async addFreeFuelAmountAsync(to: string, amount: number) {
         try {
             ///https://web3js.readthedocs.io/en/1.0/web3-eth.html#sendtransaction
             const nouce = await this.client.eth.getTransactionCount(this.fromAddress)
             var rawTransaction = {
                 to,
-                value: this.client.utils.toHex( this.client.utils.toWei(amount, 'gwei') ),
+                value: this.client.utils.toHex( this.client.utils.toWei(`${amount}`, 'gwei') ),
                 gasPrice: this.client.utils.toHex( this.client.utils.toWei('40', 'gwei') ),
                 gasLimit: this.client.utils.toHex(210000),
                 nonce: this.client.utils.toHex(nouce),
@@ -74,7 +75,7 @@ export class EthereumWeb3 {
     }
 
     
-    public async transferCoopiesAsync(to: string, amount: any, from?: string, fromPK?: string) {
+    public async transferCoopiesAsync(to: string, amount: number, from?: string, fromPK?: string) {
         try {
             const fromAddress = from ? from : this.fromAddress
             const fromKey = fromPK ? fromPK : this.fromPK
@@ -86,7 +87,7 @@ export class EthereumWeb3 {
                 gasPrice: this.client.utils.toHex( this.client.utils.toWei('40', 'gwei') ),
                 gasLimit: this.client.utils.toHex(210000),
                 nonce: this.client.utils.toHex(nouce),
-                data: this.contract.methods.transfer(to, this.client.utils.toWei(amount, 'gwei')).encodeABI(),
+                data: this.contract.methods.transfer(to, this.client.utils.toWei(`${amount}`, 'gwei')).encodeABI(),
             }
             var transaction = new Tx(rawTransaction);
             var privateKey = Buffer.from(fromKey , 'hex')
@@ -99,8 +100,5 @@ export class EthereumWeb3 {
         }
     }
 
-    public async addAmmountToAccountAsync() {
-        await this.client.eth.accounts.create();
-    }
 }
 
