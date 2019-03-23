@@ -4,4 +4,5 @@ export interface IResolver {
     getBalanceAsync(of: string): any
     addFreeFuelAmountAsync(to: string, amount: number): any
     transferCoopiesAsync(to: string, amount: number, from?: string, frompk?: string): any
+    getTransactionsByAccount(address: string): any
 }

@@ -3,6 +3,7 @@ import { UserInterface } from '../interfaces'
 import { logger, cryptoClient } from '../services'
 import { User } from '../models'
 import { ErrorPayload } from '../errorPayload'
+import * as moment from 'moment'
 
 /**
  * This function loads the user that matchs with userId (request query) into response.locals.user
@@ -47,6 +48,40 @@ export async function getAccountBalance(request: Request, response: Response) {
         logger.error(error + JSON.stringify(error))
         response.status(400).json(new Error(error))
     }
+}
+
+export async function getAccountTransactionsAsync(request: Request, response: Response) {
+    try {
+        const user: User = response.locals.user
+        const rawTransactions = await cryptoClient.getTransactionsByAccount(user.address)
+        const walletsAddresses = rawTransactions.result.map((t) => t.from !== user.address ? t.from : t.to)
+        const usersInvolved = await UserInterface.findAsync({ address: { $in: walletsAddresses } })
+        if (!usersInvolved) { throw new ErrorPayload(500, 'Server error') }
+        const transactions = dtoRawTransactions(rawTransactions, user, usersInvolved)
+        logger.info(`RETURNED Transactions => ${JSON.stringify(transactions)}`)
+        response.status(200)
+        response.send(transactions)
+    } catch (error) {
+        logger.error(error + JSON.stringify(error))
+        response.status(400).json(new Error(error))
+    }
+}
+
+function dtoRawTransactions(rawTransactions, requester: User, users: User[]): any[] {
+    return rawTransactions.result.map((t) => {
+        const dateString = moment.unix(t.timeStamp).format("MM/DD/YYYY")
+        const otherUserAddress = t.from === requester.address.toLowerCase() ? t.from : t.to
+        let otherUser: any = users.find((u) => u.address.toLowerCase() === otherUserAddress)
+        if (!otherUser) { otherUser = { userId: 'Coopify' } }
+        const coopies = t.value //Overwite the value before returning it
+        return {
+            date: dateString,
+            coopies,
+            from: t.from === requester.address.toLowerCase() ? requester.userId : otherUser.userId,
+            to: t.to === requester.address.toLowerCase() ? requester.userId : otherUser.userId,
+            inOut: t.to === requester.address.toLowerCase() ? 'in' : 'out'
+        }
+    })
 }
 
 export async function signupAsync(request: Request, response: Response, next: NextFunction) {

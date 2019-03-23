@@ -24,6 +24,14 @@ export class Web3Configs extends CValidator {
     @IsString({ message: `WEB3_PROVIDER is not a String` })
     public provider: string
 
+    @IsNotEmpty({ message: `ETHERSCAN_APIKEY is empty` })
+    @IsString({ message: `ETHERSCAN_APIKEY is not a String` })
+    public etherscanApikey: string
+
+    @IsNotEmpty({ message: `ETHERSCAN_NETWORK is empty` })
+    @IsString({ message: `ETHERSCAN_NETWORK is not a String` })
+    public etherscanNetwork: string
+
     constructor() {
         super()
         this.isValid = false
@@ -32,6 +40,8 @@ export class Web3Configs extends CValidator {
         this.contractAddress = ''
         this.toAddress = ''
         this.provider = ''
+        this.etherscanApikey = ''
+        this.etherscanNetwork = ''
     }
 
     public validate(): IValidationError {
@@ -45,5 +55,7 @@ export class Web3Configs extends CValidator {
         this.fromPK = process.env.WEB3_FROM_PK || ''
         this.toAddress = process.env.WEB3_TO_ADDRESS || ''
         this.provider = process.env.WEB3_PROVIDER || ''
+        this.etherscanApikey = process.env.ETHERSCAN_APIKEY || ''
+        this.etherscanNetwork = process.env.ETHERSCAN_NETWORK || ''
     }
   }
