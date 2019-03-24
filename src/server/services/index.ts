@@ -2,10 +2,11 @@ import { Logger } from './wLogger'
 import { redisCache, ClientParams } from './redisCache'
 import { rdb, IOptions as RDBOptions } from './rdb'
 import { EthereumWeb3 } from './web3'
+import { IResolver } from './IResolver'
 import * as config from '../../../config'
 
 var logger: Logger
-let etherClient: EthereumWeb3
+let cryptoClient: IResolver
 
 export  function initExternalServices() {
 
@@ -31,7 +32,7 @@ export  function initExternalServices() {
 
     rdb.initAsync(rdbOpt)
 
-    etherClient = new EthereumWeb3(config.web3)
+    cryptoClient = new EthereumWeb3(config.web3)
 }
 
 /*
@@ -44,4 +45,4 @@ export function initWLogger() {
     logger = new Logger(logLevel)
 }
 
-export { logger, redisCache, rdb, etherClient }
+export { logger, redisCache, rdb, cryptoClient }
