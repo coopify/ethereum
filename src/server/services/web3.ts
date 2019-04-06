@@ -6,6 +6,7 @@ import { IResolver } from './IResolver'
 import * as rp from 'request-promise'
 const Web3 = require('web3')
 const Tx = require('ethereumjs-tx')
+const etherscan = require('etherscan-api')
 
 export interface IConfigParams {
     contractAddress: string
@@ -27,6 +28,7 @@ export class EthereumWeb3 implements IResolver {
     private fromPK: string
     private etherscanApikey: string
     private etherscanNetwork: string
+    private api
 
     constructor(options: IConfigParams) {
         this.fromAddress = options.fromAddress
@@ -39,6 +41,7 @@ export class EthereumWeb3 implements IResolver {
         this.client = new Web3(provider)
         this.contractABI = JSON.parse(readFileSync(getPath().replace('/files', '') + '/Coopi.json', 'utf8'))
         this.contract = new this.client.eth.Contract(this.contractABI, this.contractAddress)
+        this.api = etherscan.init(this.etherscanApikey, 'rinkeby', '3000')
         logger.info(`Ethereum component => On`)
     }
 
@@ -53,8 +56,8 @@ export class EthereumWeb3 implements IResolver {
     }
 
     public async getBalanceAsync(address: string) {
-        const weiResult = await this.client.eth.getBalance(address)
-        return this.client.utils.fromWei(weiResult, 'gwei')
+        const weiResult = await this.api.account.tokenbalance(address, '', this.contractAddress)
+        return this.client.utils.fromWei(weiResult.result, 'gwei')
     }
 
     public async addFreeFuelAmountAsync(to: string, amount: number) {
@@ -105,22 +108,14 @@ export class EthereumWeb3 implements IResolver {
     }
 
     public async getTransactionsByAccount(address: string): Promise<IRinkebyResponse> {
-        const uri = `http://${this.etherscanNetwork}.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${this.etherscanApikey}`
-        const transactions: IRinkebyResponse = await rp({
-            uri,
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            json: true,
-        })
-        this.toCoopies(transactions)
-        return transactions
+        const etherscanResponse: IRinkebyResponse = await this.api.account.txlist(address, 1, 'latest', 1, 100, 'asc')
+        this.toCoopies(etherscanResponse)
+        return etherscanResponse
     }
 
     private toCoopies(transactions: IRinkebyResponse) {
         transactions.result.map((t) => {
-            t.value = this.client.utils.fromWei(t.value, 'microether')
+            t.value = this.client.utils.fromWei(t.value, 'gwei')
         })
     }
 }
