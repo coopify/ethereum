@@ -1,10 +1,14 @@
-import { logger } from "."
+import { logger, pusher } from '.'
 import web3 from 'web3'
 import { readFileSync } from 'fs'
 import { getPath } from '../../../files'
 import { IResolver } from './IResolver'
-import * as rp from 'request-promise'
+import { ErrorPayload } from '../errorPayload';
+// tslint:disable-next-line: no-var-requires
+const apiTemplate = require('etherscan-api')
+// tslint:disable-next-line: no-var-requires
 const Web3 = require('web3')
+// tslint:disable-next-line: no-var-requires
 const Tx = require('ethereumjs-tx')
 
 export interface IConfigParams {
@@ -25,6 +29,7 @@ export class EthereumWeb3 implements IResolver {
     private contract
     private fromAddress: string
     private fromPK: string
+    private etherscanAPI
     private etherscanApikey: string
     private etherscanNetwork: string
 
@@ -39,6 +44,7 @@ export class EthereumWeb3 implements IResolver {
         this.client = new Web3(provider)
         this.contractABI = JSON.parse(readFileSync(getPath().replace('/files', '') + '/Coopi.json', 'utf8'))
         this.contract = new this.client.eth.Contract(this.contractABI, this.contractAddress)
+        this.etherscanAPI = apiTemplate.init(this.etherscanApikey, 'rinkeby')
         logger.info(`Ethereum component => On`)
     }
 
@@ -53,74 +59,82 @@ export class EthereumWeb3 implements IResolver {
     }
 
     public async getBalanceAsync(address: string) {
-        const weiResult = await this.client.eth.getBalance(address)
-        return this.client.utils.fromWei(weiResult, 'gwei')
+        const etherscanBalance = await this.etherscanAPI.account.tokenbalance(address, '', this.contractAddress)
+        return this.client.utils.fromWei(etherscanBalance.result, 'shannon')
+    }
+
+    public async getFuelBalanceAsync(address: string) {
+        const etherBalance = await this.etherscanAPI.account.balance(address)
+        return this.client.utils.fromWei(etherBalance.result, 'shannon')
     }
 
     public async addFreeFuelAmountAsync(to: string, amount: number) {
         try {
             ///https://web3js.readthedocs.io/en/1.0/web3-eth.html#sendtransaction
             const nouce = await this.client.eth.getTransactionCount(this.fromAddress)
-            var rawTransaction = {
+            const rawTransaction = {
                 to,
-                value: this.client.utils.toHex(this.client.utils.toWei(`${amount}`, 'gwei')),
-                gasPrice: this.client.utils.toHex(this.client.utils.toWei('40', 'gwei')),
+                value: this.client.utils.toHex(this.client.utils.toWei(`${amount}`, 'shannon')),
+                gasPrice: this.client.utils.toHex(this.client.utils.toWei('40', 'shannon')),
                 gasLimit: this.client.utils.toHex(210000),
                 nonce: this.client.utils.toHex(nouce),
             }
-            var transaction = new Tx(rawTransaction);
-            var privateKey = Buffer.from(this.fromPK, 'hex')
+            const transaction = new Tx(rawTransaction)
+            const privateKey = Buffer.from(this.fromPK, 'hex')
             await transaction.sign(privateKey)
             const transactionPromise = await this.client.eth.sendSignedTransaction('0x' + transaction.serialize().toString('hex'))
             return transactionPromise
         } catch (error) {
             logger.error(`ERROR => ${JSON.stringify(error)} - ${error}`)
-            throw Error('Transaction failed')
+            throw Error('Transaction failed - addFreeFuelAmountAsync')
         }
     }
 
     public async transferCoopiesAsync(to: string, amount: number, from?: string, fromPK?: string) {
         try {
             const fromAddress = from ? from : this.fromAddress
-            const fromKey = fromPK ? fromPK : this.fromPK
+            //Remove the '0x' prefix from the pk
+            const fromKey = fromPK ? Buffer.from(fromPK.substr(2), 'hex') : Buffer.from(this.fromPK, 'hex')
             ///https://web3js.readthedocs.io/en/1.0/web3-eth.html#sendtransaction
             const nouce = await this.client.eth.getTransactionCount(fromAddress)
-            var rawTransaction = {
+            const gasPrice = this.client.utils.toWei(`10`, 'shannon')
+            const gasLimit = '80000'//Units not GWEI | shannon
+            const rawTransaction = {
                 to: this.contractAddress,
                 value: '0x0',
-                gasPrice: this.client.utils.toHex(this.client.utils.toWei('40', 'gwei')),
-                gasLimit: this.client.utils.toHex(210000),
+                //For help use https://ethgasstation.info/
+                gasPrice: this.client.utils.toHex(gasPrice),
+                gasLimit: this.client.utils.toHex(gasLimit),
                 nonce: this.client.utils.toHex(nouce),
-                data: this.contract.methods.transfer(to, this.client.utils.toWei(`${amount}`, 'gwei')).encodeABI(),
+                data: this.contract.methods.transfer(to, this.client.utils.toWei(`${amount}`, 'shannon')).encodeABI(),
             }
-            var transaction = new Tx(rawTransaction);
-            var privateKey = Buffer.from(fromKey, 'hex')
-            await transaction.sign(privateKey)
-            const transactionPromise = await this.client.eth.sendSignedTransaction('0x' + transaction.serialize().toString('hex'))
-            return transactionPromise
+            const transaction = new Tx(rawTransaction)
+            await transaction.sign(fromKey)
+            return this.client.eth.sendSignedTransaction('0x' + transaction.serialize().toString('hex'))
+                .catch((err) => {
+                    logger.error(`Se rompio todo => ${JSON.stringify(err)} -  ${err}`)
+                    throw new Error()
+                    //return { success: false }
+                })
+                .then((result) => {
+                    logger.info(`Completed transaction`)
+                    return { ...result, success: true }
+                })
         } catch (error) {
             logger.error(`ERROR => ${JSON.stringify(error)} - ${error}`)
-            throw Error('Transaction failed')
+            throw Error('Transaction failed - transferCoopiesAsync')
         }
     }
 
     public async getTransactionsByAccount(address: string): Promise<IRinkebyResponse> {
-        const uri = `http://${this.etherscanNetwork}.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${this.etherscanApikey}`
-        const transactions: IRinkebyResponse = await rp({
-            uri,
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            json: true,
-        })
+        const transactions = await this.etherscanAPI.account.tokentx(address, undefined, 1, 'latest', 'asc')
         this.toCoopies(transactions)
         return transactions
     }
 
     private toCoopies(transactions: IRinkebyResponse) {
         transactions.result.map((t) => {
-            t.value = this.client.utils.fromWei(t.value, 'microether')
+            t.value = this.client.utils.fromWei(t.value, 'shannon')
         })
     }
 }
@@ -135,4 +149,3 @@ interface IRinkebyResponse {
         contractAddress: string,
     }>
 }
-
