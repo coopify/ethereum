@@ -4,8 +4,8 @@ import { User } from '.'
 interface IAttributes {
     fromId?: string
     toId: string
-    offerId: string
-    proposalId: string
+    offerId?: string
+    proposalId?: string
     transactionHash: string
     transactionConcept: string
     systemTransaction: boolean

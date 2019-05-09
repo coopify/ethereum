@@ -28,6 +28,7 @@ export async function makePayment(amount: number, fromEth: User, toEth: User, of
                 cryptoClient.addFreeFuelAmountAsync(fromEth.address, 800000)
             }
         } catch (horribleError) {
+            //TODO: log this on the db or sommething similar
             logger.error(`¡¡¡Something went horribly wrong ${JSON.stringify(horribleError)} -  ${horribleError}!!!`)
         }
     }
@@ -70,22 +71,33 @@ export async function getUserTransactionsAsync(user: User) {
     const transactionsHashes = rawTransactions.result.map((t) => t.hash)
     const transactionsWithConcept = await ConceptInterface.findAsync({ transactionHash: { $in: transactionsHashes } })
     if (!transactionsWithConcept) { throw new ErrorPayload(500, 'Failed to get transactions') }
-    const transactions = transactionsWithConcept.map((t) => {
-        const rawTransaction = rawTransactions.find((rawT) => rawT.transactionHash === t.transactionHash)
-        if (rawTransaction) {
+    const transactions: any[] = rawTransactions.result.map((rawT) => {
+        const transactionConcept = transactionsWithConcept.find((t) => rawT.hash === t.transactionHash)
+        if (transactionConcept) {
             return {
-                date: t.createdAt,
-                coopies: rawTransaction.value,
-                from: t.from && !t.systemTransaction ? t.from.userId : 'Coopify',
-                to: t.to.userId,
+                date: transactionConcept.createdAt,
+                coopies: rawT.value,
+                from: transactionConcept.from && !transactionConcept.systemTransaction ? transactionConcept.from.userId : 'Coopify',
+                to: transactionConcept.to.userId,
+                inOut: rawT.from !== user.address ? 'out' : 'in',
+                description: transactionConcept.transactionConcept,
             }
+        } else {
+            logger.error(`Could not find transaction => ${rawT.hash}`)
         }
     })
-    return transactions
+    logger.info(`transactions => ${JSON.stringify(transactions)}`)
+    return transactions.filter((t) => t != null)
 }
 
 export async function signUpAsync(user: User) {
-    await cryptoClient.transferCoopiesAsync(user.address, 40) //TODO DOUBLE/TRIPLE CHECK THIS VALUES
+    const transaction = await cryptoClient.transferCoopiesAsync(user.address, 40) //TODO DOUBLE/TRIPLE CHECK THIS VALUES
+    await ConceptInterface.createAsync({
+        toId: user.id,
+        systemTransaction: true,
+        transactionConcept: 'Initial amount register',
+        transactionHash: transaction.transactionHash,
+    })
     logger.info(`Added coopies to account => ${user.address}`)
     await cryptoClient.addFreeFuelAmountAsync(user.address, 8000000) //TODO DOUBLE/TRIPLE CHECK THIS VALUES
 }
