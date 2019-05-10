@@ -3,10 +3,12 @@ import { redisCache, ClientParams } from './redisCache'
 import { rdb, IOptions as RDBOptions } from './rdb'
 import { EthereumWeb3 } from './web3'
 import { IResolver } from './IResolver'
+import { PusherService } from './pusher'
 import * as config from '../../../config'
 
-var logger: Logger
+let logger: Logger
 let cryptoClient: IResolver
+let pusher: PusherService
 
 export  function initExternalServices() {
 
@@ -33,6 +35,14 @@ export  function initExternalServices() {
     rdb.initAsync(rdbOpt)
 
     cryptoClient = new EthereumWeb3(config.web3)
+
+    pusher = new PusherService({
+        appId: config.pusher.appId,
+        cluster: config.pusher.cluster,
+        useTLS: true,
+        key: config.pusher.apikey,
+        secret: config.pusher.secret,
+    })
 }
 
 /*
@@ -45,4 +55,4 @@ export function initWLogger() {
     logger = new Logger(logLevel)
 }
 
-export { logger, redisCache, rdb, cryptoClient }
+export { logger, redisCache, rdb, cryptoClient, pusher }

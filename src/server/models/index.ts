@@ -1,5 +1,5 @@
-import { User, userDTO, UserAttributes } from './sequelize'
+import { User, userDTO, UserAttributes, TransactionDescription, ConceptAttributes, conceptDTO } from './sequelize'
 
-export const seqModels = [ User ]
+export const seqModels = [ User, TransactionDescription ]
 
-export { User, userDTO, UserAttributes }
+export { User, userDTO, UserAttributes, ConceptAttributes, conceptDTO, TransactionDescription }
