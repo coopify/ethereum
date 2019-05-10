@@ -1,6 +1,6 @@
 import { pusher, cryptoClient, logger } from './services'
 import { User } from './models'
-import { ConceptInterface } from './interfaces'
+import { ConceptInterface, UserInterface } from './interfaces'
 import { ErrorPayload } from './errorPayload'
 
 export async function makePayment(amount: number, fromEth: User, toEth: User, offer: any, proposal: any) {
@@ -71,22 +71,36 @@ export async function getUserTransactionsAsync(user: User) {
     const transactionsHashes = rawTransactions.result.map((t) => t.hash)
     const transactionsWithConcept = await ConceptInterface.findAsync({ transactionHash: { $in: transactionsHashes } })
     if (!transactionsWithConcept) { throw new ErrorPayload(500, 'Failed to get transactions') }
-    const transactions: any[] = rawTransactions.result.map((rawT) => {
-        const transactionConcept = transactionsWithConcept.find((t) => rawT.hash === t.transactionHash)
-        if (transactionConcept) {
-            return {
-                date: transactionConcept.createdAt,
-                coopies: rawT.value,
-                from: transactionConcept.from && !transactionConcept.systemTransaction ? transactionConcept.from.userId : 'Coopify',
-                to: transactionConcept.to.userId,
-                inOut: rawT.from !== user.address ? 'out' : 'in',
-                description: transactionConcept.transactionConcept,
+    const transactions: any[] = await Promise.all(
+        rawTransactions.result.map(async (rawT) => {
+            const transactionConcept = transactionsWithConcept.find((t) => rawT.hash === t.transactionHash)
+            if (transactionConcept) {
+                return {
+                    date: transactionConcept.createdAt,
+                    coopies: rawT.value,
+                    from: transactionConcept.from && !transactionConcept.systemTransaction ? transactionConcept.from.userId : 'Coopify',
+                    to: transactionConcept.to.userId,
+                    inOut: rawT.from === user.address.toLowerCase() ? 'out' : 'in',
+                    description: transactionConcept.transactionConcept,
+                }
+            } else {
+                const fromUser = user
+                const toUser = await UserInterface.findOneAsync({ address: rawT.to })
+                if (toUser) {
+                    return {
+                        date: rawT.timestamp,
+                        coopies: rawT.value,
+                        from: rawT.from === fromUser.address.toLowerCase() ? fromUser.userId : toUser.userId,
+                        to: rawT.to === toUser.address.toLowerCase() ? toUser.userId : fromUser.userId,
+                        inOut: rawT.from === fromUser.address.toLowerCase() ? 'out' : 'in' ,
+                    }
+                } else {
+                    logger.error(`Could not find transaction => ${rawT.hash}`)
+                }
             }
-        } else {
-            logger.error(`Could not find transaction => ${rawT.hash}`)
-        }
-    })
-    logger.info(`transactions => ${JSON.stringify(transactions)}`)
+        })
+
+    )
     return transactions.filter((t) => t != null)
 }
 
