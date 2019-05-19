@@ -71,7 +71,7 @@ export class EthereumWeb3 implements IResolver {
     public async addFreeFuelAmountAsync(to: string, amount: number) {
         try {
             ///https://web3js.readthedocs.io/en/1.0/web3-eth.html#sendtransaction
-            const nouce = await this.client.eth.getTransactionCount(this.fromAddress)
+            const nouce = await this.client.eth.getTransactionCount(this.fromAddress, 'pending')
             const rawTransaction = {
                 to,
                 value: this.client.utils.toHex(this.client.utils.toWei(`${amount}`, 'shannon')),
@@ -96,7 +96,7 @@ export class EthereumWeb3 implements IResolver {
             //Remove the '0x' prefix from the pk
             const fromKey = fromPK ? Buffer.from(fromPK.substr(2), 'hex') : Buffer.from(this.fromPK, 'hex')
             ///https://web3js.readthedocs.io/en/1.0/web3-eth.html#sendtransaction
-            const nouce = await this.client.eth.getTransactionCount(fromAddress)
+            const nouce = await this.client.eth.getTransactionCount(fromAddress, 'pending')
             const gasPrice = this.client.utils.toWei(`10`, 'shannon')
             const gasLimit = '80000'//Units not GWEI | shannon
             const rawTransaction = {

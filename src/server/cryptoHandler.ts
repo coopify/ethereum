@@ -3,7 +3,7 @@ import { User } from './models'
 import { ConceptInterface, UserInterface } from './interfaces'
 import { ErrorPayload } from './errorPayload'
 
-export async function makePayment(amount: number, fromEth: User, toEth: User, offer: any, proposal: any) {
+export async function makePayment(amount: number, fromEth: User, toEth: User, offer: any, proposal: any, concept: string) {
     if (!fromEth || !toEth) { throw new Error('User not found') }
     try {
         const fromTokenBalance = await cryptoClient.getBalanceAsync(fromEth.address)
@@ -12,7 +12,7 @@ export async function makePayment(amount: number, fromEth: User, toEth: User, of
             throw new ErrorPayload(403, `You have ${fromTokenBalance} coopies and want to expend ${amount}`)
         }
         const result = await cryptoClient.transferCoopiesAsync(toEth.address, amount, fromEth.address, fromEth.pk)
-        await paymentSuccess(result, fromEth, toEth, offer, proposal)
+        await paymentSuccess(result, fromEth, toEth, offer, proposal, concept)
         const fromBalance = await cryptoClient.getFuelBalanceAsync(fromEth.address)
         if (fromBalance && fromBalance < 400000) {
             logger.info(`Detected low fuel for user ${fromEth.userId}`)
@@ -34,7 +34,24 @@ export async function makePayment(amount: number, fromEth: User, toEth: User, of
     }
 }
 
-async function paymentSuccess(result: any, from: any, to: any, offer: any, proposal: any) {
+export async function processReward(amount: number, toEth: User, concept: string) {
+    if (!toEth) { throw new Error('User not found') }
+    try {
+        const result = await cryptoClient.transferCoopiesAsync(toEth.address, amount)
+        await ConceptInterface.createAsync({
+            toId: toEth.id,
+            systemTransaction: true,
+            transactionConcept: concept,
+            transactionHash: result.transactionHash,
+        })
+        logger.info(`Added reward coopies to account => ${toEth.address}`)
+    } catch (error) {
+        //TODO: log this on the db or sommething similar
+        logger.error(`¡¡¡Something went horribly wrong ${JSON.stringify(error)}!!!`)
+    }
+}
+
+async function paymentSuccess(result: any, from: any, to: any, offer: any, proposal: any, conceptText: string) {
     logger.info(`Result => ${JSON.stringify(result)}`)
     try {
         const concept = await ConceptInterface.createAsync({
@@ -43,7 +60,7 @@ async function paymentSuccess(result: any, from: any, to: any, offer: any, propo
             offerId: offer.id,
             proposalId: proposal.id,
             systemTransaction: false,
-            transactionConcept: 'Payment Success for ${offerName}',
+            transactionConcept: conceptText,
             transactionHash: result.transactionHash,
         })
         logger.info(`Concept => ${JSON.stringify(concept)}`)
@@ -81,6 +98,7 @@ export async function getUserTransactionsAsync(user: User) {
                     from: transactionConcept.from && !transactionConcept.systemTransaction ? transactionConcept.from.userId : 'Coopify',
                     to: transactionConcept.to.userId,
                     inOut: rawT.from === user.address.toLowerCase() ? 'out' : 'in',
+                    proposalId: transactionConcept.proposalId,
                     description: transactionConcept.transactionConcept,
                 }
             } else {

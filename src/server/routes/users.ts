@@ -7,6 +7,7 @@ userRoutes.get('/:userId/transactions', usersController.getAccountTransactionsAs
 userRoutes.get('/:userId/balance', usersController.getAccountBalance) //TODO: Make this generic to have the account be recieved as part of the route
 
 userRoutes.post('/pay', usersController.makePaymentAsync)
+userRoutes.post('/reward', usersController.processRewardAsync)
 userRoutes.post('/signup', usersController.signupAsync)
 
 userRoutes.param('userId', usersController.loadAsync)

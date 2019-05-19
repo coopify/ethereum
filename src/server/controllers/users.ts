@@ -4,7 +4,7 @@ import { logger, cryptoClient } from '../services'
 import { User } from '../models'
 import { ErrorPayload } from '../errorPayload'
 import * as moment from 'moment'
-import { makePayment, getUserTransactionsAsync, signUpAsync } from '../cryptoHandler'
+import { makePayment, getUserTransactionsAsync, signUpAsync, processReward } from '../cryptoHandler'
 
 /**
  * This function loads the user that matchs with userId (request query) into response.locals.user
@@ -25,12 +25,27 @@ export async function loadAsync(request: Request, response: Response, next: Next
 
 export async function makePaymentAsync(request: Request, response: Response) {
     try {
-        const { from, to, amount, offer, proposal } = request.body
-        if (!to || !from || !amount || !offer || !proposal) { throw new Error('Missing required fields') }
+        const { from, to, amount, offer, proposal, concept } = request.body
+        if (!to || !from || !amount || !offer || !proposal || !concept) { throw new Error('Missing required fields') }
         const toEth = await UserInterface.findOneAsync({ userId: to.id })
         const fromEth = await UserInterface.findOneAsync({ userId: from.id })
         if (!toEth || !fromEth ) { throw new Error('User not found') }
-        makePayment(amount, fromEth, toEth, offer, proposal)
+        makePayment(amount, fromEth, toEth, offer, proposal, concept)
+        response.status(200)
+        response.send()
+    } catch (error) {
+        logger.error(error + JSON.stringify(error))
+        response.status(400).json(new Error(error))
+    }
+}
+
+export async function processRewardAsync(request: Request, response: Response) {
+    try {
+        const { to, amount, concept } = request.body
+        if (!to || !amount || !concept) { throw new Error('Missing required fields') }
+        const toEth = await UserInterface.findOneAsync({ userId: to.id })
+        if (!toEth ) { throw new Error('User not found') }
+        processReward(amount, toEth, concept)
         response.status(200)
         response.send()
     } catch (error) {
