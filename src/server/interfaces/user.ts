@@ -1,5 +1,5 @@
 import { User, UserAttributes } from '../models'
-import { logger } from '../services'
+import { logger, encryption } from '../services'
 
 export async function getAsync(id: string): Promise<User | null> {
     try {
@@ -35,6 +35,7 @@ export async function findOneAsync(where: object): Promise<User | null> {
 
 export async function createAsync(body: UserAttributes): Promise<User | null> {
     try {
+        body.pk = encryption.encryptString(body.pk)
         const userInstance = await User.createAsync(body)
 
         return userInstance

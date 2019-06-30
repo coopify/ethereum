@@ -4,11 +4,13 @@ import { rdb, IOptions as RDBOptions } from './rdb'
 import { EthereumWeb3 } from './web3'
 import { IResolver } from './IResolver'
 import { PusherService } from './pusher'
+import { EncryptionHandlerService } from './encryptionHandler'
 import * as config from '../../../config'
 
 let logger: Logger
 let cryptoClient: IResolver
 let pusher: PusherService
+let encryption: EncryptionHandlerService
 
 export  function initExternalServices() {
 
@@ -43,6 +45,8 @@ export  function initExternalServices() {
         key: config.pusher.apikey,
         secret: config.pusher.secret,
     })
+
+    encryption = new EncryptionHandlerService(config.encrypt)
 }
 
 /*
@@ -55,4 +59,4 @@ export function initWLogger() {
     logger = new Logger(logLevel)
 }
 
-export { logger, redisCache, rdb, cryptoClient, pusher }
+export { logger, redisCache, rdb, cryptoClient, pusher, encryption }
