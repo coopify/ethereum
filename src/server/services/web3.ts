@@ -1,5 +1,5 @@
 import { logger, pusher } from '.'
-import web3 from 'web3'
+//import web3 from 'web3'
 import { readFileSync } from 'fs'
 import { getPath } from '../../../files'
 import { IResolver } from './IResolver'
@@ -23,7 +23,7 @@ export interface IConfigParams {
 
 export class EthereumWeb3 implements IResolver {
     public connected: boolean = false
-    private client: web3
+    private client//: web3
     private contractABI: any
     private contractAddress: string
     private contract
