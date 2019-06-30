@@ -1,11 +1,18 @@
-import { pusher, cryptoClient, logger } from './services'
+import { pusher, cryptoClient, logger, redisCache } from './services'
 import { User } from './models'
-import { ConceptInterface, UserInterface } from './interfaces'
+import { ConceptInterface, UserInterface, AuthorizationInterface } from './interfaces'
 import { ErrorPayload } from './errorPayload'
 
 export async function makePayment(amount: number, fromEth: User, toEth: User, offer: any, proposal: any, concept: string) {
     if (!fromEth || !toEth) { throw new Error('User not found') }
     try {
+        const authorization = await AuthorizationInterface.findOneAsync({
+            fromId: fromEth.userId,
+            toId: toEth.userId,
+            offerId: offer.id,
+            status: 'Waiting',
+        })
+        if (!authorization) { throw new ErrorPayload(403, 'There is no pre authorization for a transaction') }
         const fromTokenBalance = await cryptoClient.getBalanceAsync(fromEth.address)
         if (fromTokenBalance < amount) {
             logger.info(`You have ${fromTokenBalance} coopies and want to expend ${amount}`)
@@ -18,6 +25,7 @@ export async function makePayment(amount: number, fromEth: User, toEth: User, of
             logger.info(`Detected low fuel for user ${fromEth.userId}`)
             cryptoClient.addFreeFuelAmountAsync(fromEth.address, 800000)
         }
+        AuthorizationInterface.updateAsync(authorization, { status: 'Confirmed' })
     } catch (error) {
         logger.error(`Something went wrong ${JSON.stringify(error)} -  ${error}`)
         try {
