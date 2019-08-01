@@ -5,7 +5,7 @@ const services = require('../dist/src/server/services')
 module.exports = {
     up: (queryInterface) => {
         config.validateAll()
-        config.initWLogger()
+        services.initWLogger()
         services.initExternalServices()
         return queryInterface.describeTable('User').then((table) => {
             const UserModel = queryInterface.sequelize.define('User', table, { tableName: 'User' })
@@ -22,7 +22,7 @@ module.exports = {
 
     down: (queryInterface) => {
         config.validateAll()
-        config.initWLogger()
+        services.initWLogger()
         services.initExternalServices()
         return queryInterface.describeTable('User').then((table) => {
             const UserModel = queryInterface.sequelize.define('User', table, { tableName: 'User' })
