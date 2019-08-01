@@ -1,4 +1,4 @@
-import { pusher, cryptoClient, logger } from './services'
+import { pusher, cryptoClient, logger, encryption } from './services'
 import { User } from './models'
 import { ConceptInterface, UserInterface } from './interfaces'
 import { ErrorPayload } from './errorPayload'
@@ -11,7 +11,8 @@ export async function makePayment(amount: number, fromEth: User, toEth: User, of
             logger.info(`You have ${fromTokenBalance} coopies and want to expend ${amount}`)
             throw new ErrorPayload(403, `You have ${fromTokenBalance} coopies and want to expend ${amount}`)
         }
-        const result = await cryptoClient.transferCoopiesAsync(toEth.address, amount, fromEth.address, fromEth.pk)
+        const decryptedPK = encryption.decryptString(fromEth.pk)
+        const result = await cryptoClient.transferCoopiesAsync(toEth.address, amount, fromEth.address, decryptedPK)
         await paymentSuccess(result, fromEth, toEth, offer, proposal, concept)
         const fromBalance = await cryptoClient.getFuelBalanceAsync(fromEth.address)
         if (fromBalance && fromBalance < 400000) {
