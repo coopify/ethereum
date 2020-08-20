@@ -41,7 +41,7 @@
     "@mcrowe/redis-promise": "^0.0.1",
     "@types/ethereumjs-tx": "^1.0.1",
     "apn": "^2.1.5",
-    "bcrypt": "3.0.3",
+    "bcrypt": "5.0.0",
     "body-parser": "^1.18.2",
     "class-validator": "0.9.1",
     "cookie-parser": "^1.4.3",
